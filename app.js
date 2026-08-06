@@ -230,15 +230,26 @@ function escapeHtml(value) {
 async function initialize() {
   bindEvents();
   try {
-    const response = await fetch('data/recipes.json', { cache: 'no-store' });
-    if (!response.ok) throw new Error(`Recipe library request failed (${response.status})`);
-    const data = await response.json();
+    let data = Array.isArray(window.RECIPE_LIBRARY) ? window.RECIPE_LIBRARY : null;
+
+    // When hosted, prefer the JSON database so it remains the canonical editable source.
+    // When opened directly from a folder, browsers usually block fetch(file://...),
+    // so recipes.js provides the same structured library as a reliable fallback.
+    if (location.protocol !== 'file:') {
+      try {
+        const response = await fetch('data/recipes.json', { cache: 'no-store' });
+        if (response.ok) data = await response.json();
+      } catch (fetchError) {
+        console.warn('Using embedded recipe fallback because JSON fetch failed.', fetchError);
+      }
+    }
+
     if (!Array.isArray(data)) throw new Error('Recipe library is not an array.');
     builtIns = data.filter((recipe) => recipe?.id && recipe?.name && Array.isArray(recipe.ingredients) && Array.isArray(recipe.instructions));
     if (!builtIns.length) throw new Error('No valid built-in recipes were found.');
   } catch (error) {
     console.error(error);
-    $('#recipeGrid').innerHTML = '<div class="empty"><strong>The recipe library could not load.</strong><br>Open the app through GitHub Pages or a local web server rather than double-clicking index.html.</div>';
+    $('#recipeGrid').innerHTML = '<div class="empty"><strong>The recipe library could not load.</strong><br>Please confirm that the data folder is beside index.html and contains recipes.js.</div>';
     $('#recipeCount').textContent = '0';
     return;
   }

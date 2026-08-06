@@ -1,13 +1,3 @@
-# Julie's Recipe Book v9
+# Julie’s Recipe Book v10
 
-This build contains 301 recipes and can be opened in either of two ways:
-
-1. Double-click `index.html` to open it directly from the downloaded folder.
-2. Upload the folder contents to GitHub Pages.
-
-## Recipe data
-
-- `data/recipes.json` is the canonical structured recipe database used when hosted.
-- `data/recipes.js` contains the same recipe library and allows the app to work when `index.html` is opened directly from a local folder.
-
-Keep the `data` folder beside `index.html`; do not move or rename it.
+This build is intentionally self-contained. Open `index.html` directly in Chrome, Edge, Firefox, or Safari. All 301 recipes, styling, and application code are embedded in that one file, so no data folder or web server is required.

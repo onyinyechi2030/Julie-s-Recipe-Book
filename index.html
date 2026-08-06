@@ -17,12 +17,14 @@ dialog{width:min(850px,calc(100% - 24px));border:0;border-radius:18px;padding:0;
 @media(max-width:1050px){.controls{grid-template-columns:1fr 1fr 1fr}}
 @media(max-width:760px){body{font-size:16px}.topbar{align-items:flex-start;flex-direction:column;padding:15px}.tabs{width:100%;display:grid;grid-template-columns:repeat(4,1fr)}.tab{font-size:13px;padding:9px 5px}main{padding:25px 15px 60px}.hero{grid-template-columns:1fr}.countbox{display:none}.controls{grid-template-columns:1fr}.recipe-grid{grid-template-columns:1fr}.two,.modal-columns{grid-template-columns:1fr}.modal{padding:20px}.brand h1{font-size:21px}}
 
+
+.search-row{display:grid;grid-template-columns:minmax(260px,1fr) auto auto;gap:12px;grid-column:1/-1}.search-row input{width:100%}.search-summary{grid-column:1/-1;display:flex;justify-content:space-between;gap:16px;align-items:center;padding:2px 2px 0;color:var(--muted);font-size:.95rem}.search-summary strong{color:var(--ink)}.clear-search{background:transparent;border:0;color:var(--accent);font-weight:700;padding:6px 0}.clear-search:hover{text-decoration:underline}.search-help{grid-column:1/-1;margin:-2px 0 2px;color:var(--muted);font-size:.9rem}@media(max-width:720px){.search-row{grid-template-columns:1fr 1fr}.search-row input{grid-column:1/-1}.search-summary{align-items:flex-start;flex-direction:column;gap:4px}}
 </style>
 </head>
 <body>
 <header><div class="topbar"><div class="brand"><div class="logo">J</div><div><h1>Julie's Recipe Book</h1><p>Simple recipes you enjoy making</p></div></div><nav class="tabs"><button class="tab active" data-view="recipes">Recipes</button><button class="tab" data-view="favorites">Favorites</button><button class="tab" data-view="shopping">Shopping List</button><button class="tab" data-view="add">Add Recipe</button></nav></div></header>
 <main>
-<section id="recipes" class="view active"><div class="hero"><div><p class="eyebrow">Your recipe collection</p><h2>A growing personal cookbook built around the foods you enjoy.</h2><p>Browse a broad collection by meal, cuisine, dish type, or protein. Nutrition values are approximate per serving and now include carbohydrates. Built-in recipes load from the structured recipe library; favorites, notes, shopping items, and personal recipes are saved on this device.</p></div><div class="countbox"><strong id="recipeCount">0</strong><span>recipes available</span></div></div><div class="controls"><input id="search" type="search" placeholder="Search recipes or ingredients"><select id="category"><option value="all">All dish types</option></select><select id="meal"><option value="all">All meals</option></select><select id="region"><option value="all">All regions</option></select><select id="protein"><option value="all">All proteins</option></select></div><div id="recipeGrid" class="recipe-grid"></div></section>
+<section id="recipes" class="view active"><div class="hero"><div><p class="eyebrow">Your recipe collection</p><h2>A growing personal cookbook built around the foods you enjoy.</h2><p>Browse a broad collection by meal, cuisine, dish type, or protein. Nutrition values are approximate per serving and now include carbohydrates. Built-in recipes load from the structured recipe library; favorites, notes, shopping items, and personal recipes are saved on this device.</p></div><div class="countbox"><strong id="recipeCount">0</strong><span>recipes available</span></div></div><div class="controls"><div class="search-row"><input id="search" type="search" placeholder="Try: pork belly, spicy fried rice, salmon soup, mango smoothie" aria-label="Search recipes"><button id="searchButton" class="primary" type="button">Search</button><button id="clearSearch" class="secondary" type="button">Clear</button></div><p class="search-help">Searches recipe names, ingredients, descriptions, cuisines, proteins, tags, and instructions. Multiple words may appear anywhere in a recipe.</p><select id="category"><option value="all">All dish types</option></select><select id="meal"><option value="all">All meals</option></select><select id="region"><option value="all">All regions</option></select><select id="protein"><option value="all">All proteins</option></select><div class="search-summary"><span id="matchSummary"></span><button id="resetFilters" class="clear-search" type="button">Reset all filters</button></div></div><div id="recipeGrid" class="recipe-grid"></div></section>
 <section id="favorites" class="view"><div class="section-head"><p class="eyebrow">Saved recipes</p><h2>Favorites</h2><p>Use the heart button on any recipe to add it here.</p></div><div id="favoriteGrid" class="recipe-grid"></div></section>
 <section id="shopping" class="view"><div class="section-head"><p class="eyebrow">Ingredients to buy</p><h2>Shopping List</h2><p>Add ingredients from a recipe, then check them off while shopping.</p></div><div class="panel"><div class="actions"><button id="copyList" class="secondary">Copy list</button><button id="clearList" class="danger">Clear list</button></div><div id="shoppingItems"></div></div></section>
 <section id="add" class="view"><div class="section-head"><p class="eyebrow">Personal collection</p><h2>Add a Recipe</h2><p>Save your own recipe. Built-in recipes will not be affected.</p></div><div id="formMessage" class="message"></div><div class="panel"><form id="recipeForm"><div class="two"><label>Recipe name<input name="name" required></label><label>Category<input name="category" placeholder="Soup, Main Dish, Smoothie" required></label></div><div class="two"><label>Servings<input name="servings" type="number" min="1" value="4" required></label><label>Labels<small>Separate labels with commas</small><input name="tags" placeholder="High protein, no added sugar"></label></div><div class="two"><label>Calories per serving<input name="calories" type="number" min="0" placeholder="Optional"></label><label>Protein per serving (g)<input name="protein" type="number" min="0" placeholder="Optional"></label></div><label>Carbohydrates per serving (g)<input name="carbs" type="number" min="0" placeholder="Optional"></label><label>Description<textarea name="description" rows="3"></textarea></label><label>Ingredients<small>Enter one ingredient per line, including its quantity.</small><textarea name="ingredients" rows="8" placeholder="1 cup strawberries&#10;1/2 cup mango" required></textarea></label><label>Instructions<small>Enter one step per line.</small><textarea name="instructions" rows="8" required></textarea></label><button class="primary" type="submit">Save Recipe</button></form></div></section>
@@ -88,8 +90,52 @@ function card(recipe) {
   </article>`;
 }
 
+function normalizeSearchText(value) {
+  return String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[–—]/g, '-')
+    .replace(/[^a-zA-Z0-9]+/g, ' ')
+    .toLowerCase()
+    .trim();
+}
+
+const SEARCH_SYNONYMS = {
+  noodle: ['noodles', 'pasta', 'vermicelli'],
+  noodles: ['noodle', 'pasta', 'vermicelli'],
+  pasta: ['noodle', 'noodles'],
+  scallion: ['scallions', 'green onion', 'green onions'],
+  scallions: ['scallion', 'green onion', 'green onions'],
+  chili: ['chilli', 'chile', 'spicy'],
+  chilli: ['chili', 'chile', 'spicy'],
+  yoghurt: ['yogurt'],
+  yogurt: ['yoghurt'],
+  gizzards: ['gizzard'],
+  gizzard: ['gizzards'],
+  potatoes: ['potato'],
+  potato: ['potatoes'],
+  wings: ['wing'],
+  wing: ['wings']
+};
+
+function searchTokens(query) {
+  return normalizeSearchText(query).split(/\s+/).filter(Boolean);
+}
+
+function tokenMatches(haystack, token) {
+  if (haystack.includes(token)) return true;
+  return (SEARCH_SYNONYMS[token] || []).some((term) => haystack.includes(normalizeSearchText(term)));
+}
+
+function recipeMatchesQuery(recipe, query) {
+  const tokens = searchTokens(query);
+  if (!tokens.length) return true;
+  const haystack = searchableText(recipe);
+  return tokens.every((token) => tokenMatches(haystack, token));
+}
+
 function renderRecipes() {
-  const q = $('#search').value.trim().toLowerCase();
+  const q = $('#search').value;
   const category = $('#category').value;
   const meal = $('#meal').value;
   const region = $('#region').value;
@@ -99,17 +145,22 @@ function renderRecipes() {
     (meal === 'all' || recipe.meal === meal) &&
     (region === 'all' || recipe.region === region) &&
     (protein === 'all' || recipe.proteinType === protein) &&
-    (!q || searchableText(recipe).includes(q))
+    recipeMatchesQuery(recipe, q)
   );
-  $('#recipeGrid').innerHTML = list.length ? list.map(card).join('') : '<div class="empty">No recipes match those filters.</div>';
+  $('#recipeGrid').innerHTML = list.length ? list.map(card).join('') : '<div class="empty"><strong>No recipes matched.</strong><br>Try fewer search words or reset the active filters.</div>';
   $('#recipeCount').textContent = allRecipes().length;
+  const activeFilters = [category, meal, region, protein].filter((value) => value !== 'all').length;
+  $('#matchSummary').innerHTML = `<strong>${list.length}</strong> of ${allRecipes().length} recipes shown${q.trim() ? ` for “${escapeHtml(q.trim())}”` : ''}${activeFilters ? ` · ${activeFilters} filter${activeFilters === 1 ? '' : 's'} active` : ''}`;
 }
 
 function searchableText(recipe) {
-  return [
+  const ingredientText = (recipe.ingredients || []).map(ingredientToText);
+  const fields = [
     recipe.name, recipe.description, recipe.category, recipe.meal, recipe.region, recipe.proteinType,
-    ...(recipe.tags || []), ...(recipe.ingredients || []).map(ingredientToText)
-  ].join(' ').toLowerCase();
+    ...(recipe.tags || []), ...ingredientText, ...(recipe.instructions || []),
+    ...(recipe.pairings || []), ...(recipe.substitutions || []), ...(recipe.variations || [])
+  ];
+  return normalizeSearchText(fields.join(' '));
 }
 
 function renderFavorites() {
@@ -217,6 +268,16 @@ function bindEvents() {
     if (open) openRecipe(open.dataset.open);
   });
   $('#search').addEventListener('input', renderRecipes);
+  $('#search').addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); renderRecipes(); } });
+  $('#searchButton').addEventListener('click', renderRecipes);
+  const resetSearchAndFilters = () => {
+    $('#search').value = '';
+    ['#category', '#meal', '#region', '#protein'].forEach((id) => { $(id).value = 'all'; });
+    renderRecipes();
+    $('#search').focus();
+  };
+  $('#clearSearch').addEventListener('click', resetSearchAndFilters);
+  $('#resetFilters').addEventListener('click', resetSearchAndFilters);
   ['#category', '#meal', '#region', '#protein'].forEach((id) => $(id).addEventListener('change', renderRecipes));
   $('#shoppingItems').addEventListener('change', (event) => {
     if (!event.target.dataset.check) return;
